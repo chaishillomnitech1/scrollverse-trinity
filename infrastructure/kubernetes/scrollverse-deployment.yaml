@@ -1,0 +1,260 @@
+# ============================================================
+# SCROLLVERSE TRINITY SOVEREIGN ECOSYSTEM
+# PILLAR 6: 50M+ User Scaling Infrastructure
+# Kubernetes Production Deployment (1000+ nodes capable)
+# Supreme Sovereign: Chais Kenyatta Hill (Sabir Allah the Great)
+# ============================================================
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: scrollverse
+  labels:
+    ecosystem: scrollverse-trinity-sovereign
+    sovereign: chais-kenyatta-hill
+
+---
+# ─── API Deployment ───────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scrollverse-api
+  namespace: scrollverse
+  labels:
+    app: scrollverse-api
+    version: "3.0.0"
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: scrollverse-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 5
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: scrollverse-api
+        version: "3.0.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values: [scrollverse-api]
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: scrollverse-api
+          image: scrollverse-api:3.0.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+            - containerPort: 9090
+              name: metrics
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3000"
+          envFrom:
+            - secretRef:
+                name: scrollverse-secrets
+            - configMapRef:
+                name: scrollverse-config
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 15"]
+      terminationGracePeriodSeconds: 60
+
+---
+# ─── Horizontal Pod Autoscaler ────────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: scrollverse-api-hpa
+  namespace: scrollverse
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: scrollverse-api
+  minReplicas: 10
+  maxReplicas: 1000
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 70
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Pods
+          value: 50
+          periodSeconds: 60
+        - type: Percent
+          value: 100
+          periodSeconds: 60
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 10
+          periodSeconds: 120
+
+---
+# ─── Service ──────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: scrollverse-api-service
+  namespace: scrollverse
+  labels:
+    app: scrollverse-api
+spec:
+  selector:
+    app: scrollverse-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+  type: ClusterIP
+
+---
+# ─── Ingress with CloudFlare CDN ─────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: scrollverse-ingress
+  namespace: scrollverse
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+    - hosts:
+        - api.scrollverse.app
+      secretName: scrollverse-tls
+  rules:
+    - host: api.scrollverse.app
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: scrollverse-api-service
+                port:
+                  number: 80
+
+---
+# ─── ConfigMap ────────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: scrollverse-config
+  namespace: scrollverse
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  METRICS_PORT: "9090"
+  LOG_LEVEL: "info"
+  RATE_LIMIT_WINDOW_MS: "900000"
+  RATE_LIMIT_MAX_REQUESTS: "100"
+  RATE_LIMIT_PAYMENT_MAX: "10"
+  ZAKAT_RATE_MIN: "0.0777"
+  ZAKAT_RATE_MAX: "0.15"
+  REFERRAL_VIRAL_COEFFICIENT: "1.18"
+  REFERRAL_REWARD_AMOUNT: "500"
+
+---
+# ─── Pod Disruption Budget ────────────────────────────────────
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: scrollverse-api-pdb
+  namespace: scrollverse
+spec:
+  minAvailable: "80%"
+  selector:
+    matchLabels:
+      app: scrollverse-api
+
+---
+# ─── Vertical Pod Autoscaler ──────────────────────────────────
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: scrollverse-api-vpa
+  namespace: scrollverse
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: scrollverse-api
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: scrollverse-api
+        minAllowed:
+          cpu: "250m"
+          memory: "256Mi"
+        maxAllowed:
+          cpu: "4000m"
+          memory: "4Gi"

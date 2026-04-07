@@ -1,0 +1,195 @@
+# ============================================================
+# SCROLLVERSE TRINITY SOVEREIGN ECOSYSTEM
+# PILLAR 6: Advanced Scaling Infrastructure
+# Target: 50M+ users | $60.9B revenue potential
+# ============================================================
+
+---
+# ─── Cluster Autoscaler ───────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-autoscaler
+  namespace: kube-system
+  labels:
+    app: cluster-autoscaler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cluster-autoscaler
+  template:
+    metadata:
+      labels:
+        app: cluster-autoscaler
+    spec:
+      containers:
+        - name: cluster-autoscaler
+          image: k8s.gcr.io/autoscaling/cluster-autoscaler:v1.28.0
+          command:
+            - ./cluster-autoscaler
+            - --v=4
+            - --stderrthreshold=info
+            - --cloud-provider=aws
+            - --skip-nodes-with-local-storage=false
+            - --expander=least-waste
+            - --node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/scrollverse
+            - --balance-similar-node-groups
+            - --scale-down-enabled=true
+            - --scale-down-delay-after-add=10m
+            - --scale-down-unneeded-time=10m
+            - --max-node-provision-time=15m
+            - --nodes=10:1000:scrollverse-node-group
+
+---
+# ─── Redis Cluster for Session Management ────────────────────
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-cluster
+  namespace: scrollverse
+spec:
+  serviceName: redis-cluster
+  replicas: 6
+  selector:
+    matchLabels:
+      app: redis-cluster
+  template:
+    metadata:
+      labels:
+        app: redis-cluster
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          command:
+            - redis-server
+            - /etc/redis/redis.conf
+            - --cluster-enabled yes
+            - --cluster-config-file nodes.conf
+            - --cluster-node-timeout 5000
+            - --maxmemory 4gb
+            - --maxmemory-policy allkeys-lru
+            - --save 900 1
+            - --save 300 10
+          ports:
+            - containerPort: 6379
+              name: client
+            - containerPort: 16379
+              name: gossip
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "4Gi"
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 20Gi
+
+---
+# ─── MySQL StatefulSet (Master-Master Replication) ────────────
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-cluster
+  namespace: scrollverse
+spec:
+  serviceName: mysql
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      initContainers:
+        - name: init-mysql
+          image: mysql:8.0
+          command:
+            - bash
+            - "-c"
+            - |
+              set -ex
+              [[ $HOSTNAME =~ -([0-9]+)$ ]] || exit 1
+              ordinal=${BASH_REMATCH[1]}
+              echo [mysqld] > /mnt/conf.d/server-id.cnf
+              echo server-id=$((100 + $ordinal)) >> /mnt/conf.d/server-id.cnf
+              if [[ $ordinal -eq 0 ]]; then
+                cp /mnt/config-map/primary.cnf /mnt/conf.d/
+              else
+                cp /mnt/config-map/replica.cnf /mnt/conf.d/
+              fi
+          volumeMounts:
+            - name: conf
+              mountPath: /mnt/conf.d
+            - name: config-map
+              mountPath: /mnt/config-map
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: scrollverse-secrets
+                  key: DB_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              value: scrollverse_sovereign
+          ports:
+            - name: mysql
+              containerPort: 3306
+          resources:
+            requests:
+              cpu: "1000m"
+              memory: "4Gi"
+            limits:
+              cpu: "4000m"
+              memory: "16Gi"
+          livenessProbe:
+            exec:
+              command: ["mysqladmin", "ping"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - mysql
+                - -h
+                - 127.0.0.1
+                - -e
+                - "SELECT 1"
+            initialDelaySeconds: 5
+            periodSeconds: 2
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+              subPath: mysql
+            - name: conf
+              mountPath: /etc/mysql/conf.d
+      volumes:
+        - name: conf
+          emptyDir: {}
+        - name: config-map
+          configMap:
+            name: mysql-config
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: fast-ssd
+        resources:
+          requests:
+            storage: 500Gi

@@ -1,0 +1,53 @@
+# ============================================================
+# SCROLLVERSE TRINITY SOVEREIGN ECOSYSTEM
+# Prometheus Monitoring Configuration
+# Target: 99.99% uptime | <50ms API latency
+# ============================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    ecosystem: 'scrollverse'
+    sovereign: 'chais_kenyatta_hill'
+    environment: 'production'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+rule_files:
+  - 'alerts/*.yml'
+
+scrape_configs:
+  # ScrollVerse API Metrics
+  - job_name: 'scrollverse_api'
+    static_configs:
+      - targets: ['api:9090']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'scrollverse-api'
+
+  # Node Exporter (system metrics)
+  - job_name: 'node_exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # MySQL Exporter
+  - job_name: 'mysql'
+    static_configs:
+      - targets: ['mysql-exporter:9104']
+
+  # Redis Exporter
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  # Nginx Exporter
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
