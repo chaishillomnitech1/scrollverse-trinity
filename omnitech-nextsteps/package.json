@@ -1,0 +1,37 @@
+{
+  "name": "omnitech-nextsteps",
+  "version": "3.0.0",
+  "description": "ScrollSoul Sovereignty / OmniTech Ecosystem — Next Steps Implementation",
+  "author": "Chais Kenyatta Hill (Sabir Allah the Great)",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "bot": "node telegram-bot/sovereignBot.js",
+    "test:frequency": "node tests/frequencyActivation.test.js",
+    "deploy:londc": "cd contracts && npx hardhat run deploy-londc.js --network polygon",
+    "deploy:londc:testnet": "cd contracts && npx hardhat run deploy-londc.js --network amoy",
+    "register:portals": "node -e \"require('./kernel-connector/sovereignKernelConnector').registerAllPortals().then(r => console.log('Done:', r.summary))\"",
+    "start": "node telegram-bot/sovereignBot.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1",
+    "node-telegram-bot-api": "^0.64.0"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "hardhat": "^2.19.0"
+  },
+  "keywords": [
+    "scrollverse",
+    "omnitech",
+    "sovereign",
+    "polygon",
+    "londc",
+    "telegram",
+    "web3",
+    "528hz",
+    "963hz",
+    "432hz"
+  ]
+}
