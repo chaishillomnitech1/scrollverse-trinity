@@ -224,21 +224,26 @@ EOF
 verify_endpoints() {
   log_section "Verifying Web Endpoints"
 
+  # BASE_URL defaults to localhost for local runs; set it to the production
+  # URL (e.g. https://api.scrollverse.app) when running in CI/CD.
   declare -A ENDPOINTS=(
     ["GitHub Pages"]="https://chaishillomnitech1.github.io/scrollverse-trinity/"
     ["Manus Webdev"]="https://scrollport-xkjtdnvi.manus.space/"
     ["API Backend"]="${BASE_URL:-http://localhost:3000}/health"
   )
 
+  CURL_ERR=$(mktemp)
   for label in "${!ENDPOINTS[@]}"; do
     url="${ENDPOINTS[$label]}"
-    STATUS=$(curl -o /dev/null -s -w "%{http_code}" --max-time 15 "${url}" 2>/dev/null || echo "000")
+    STATUS=$(curl -o /dev/null -s -w "%{http_code}" --max-time 15 "${url}" 2>"${CURL_ERR}" || echo "000")
     if [[ "${STATUS}" == "200" ]]; then
       log_info "${label}: HTTP ${STATUS} ✅"
     else
-      log_warn "${label}: HTTP ${STATUS} (${url})"
+      DETAIL=$(cat "${CURL_ERR}")
+      log_warn "${label}: HTTP ${STATUS} (${url})${DETAIL:+ — ${DETAIL}}"
     fi
   done
+  rm -f "${CURL_ERR}"
 }
 
 # ─── Main Execution ───────────────────────────────────────────

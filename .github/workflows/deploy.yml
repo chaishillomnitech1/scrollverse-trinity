@@ -76,25 +76,26 @@ jobs:
     needs: deploy-pages
     runs-on: ubuntu-latest
     steps:
-      - name: Verify GitHub Pages endpoint (HTTPS)
+      - name: Verify HTTPS endpoints
         run: |
-          PAGE_URL="https://chaishillomnitech1.github.io/scrollverse-trinity/"
-          STATUS=$(curl -o /dev/null -s -w "%{http_code}" --max-time 30 "$PAGE_URL" || echo "000")
-          if [ "$STATUS" = "200" ]; then
-            echo "✅ GitHub Pages accessible — HTTP $STATUS"
-          else
-            echo "⚠️  GitHub Pages returned HTTP $STATUS (may take a moment to propagate)"
-          fi
+          check_endpoint() {
+            local label="$1"
+            local url="$2"
+            local CURL_ERR
+            CURL_ERR=$(mktemp)
+            STATUS=$(curl -o /dev/null -s -w "%{http_code}" --max-time 30 "$url" 2>"$CURL_ERR" || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ ${label} accessible — HTTP ${STATUS}  (${url})"
+            else
+              DETAIL=$(cat "$CURL_ERR")
+              echo "⚠️  ${label} returned HTTP ${STATUS}  (${url})"
+              [ -n "$DETAIL" ] && echo "   curl detail: $DETAIL"
+            fi
+            rm -f "$CURL_ERR"
+          }
 
-      - name: Verify Manus Webdev endpoint (HTTPS)
-        run: |
-          MANUS_URL="https://scrollport-xkjtdnvi.manus.space/"
-          STATUS=$(curl -o /dev/null -s -w "%{http_code}" --max-time 30 "$MANUS_URL" || echo "000")
-          if [ "$STATUS" = "200" ]; then
-            echo "✅ Manus Webdev endpoint accessible — HTTP $STATUS"
-          else
-            echo "ℹ️  Manus Webdev returned HTTP $STATUS"
-          fi
+          check_endpoint "GitHub Pages" "https://chaishillomnitech1.github.io/scrollverse-trinity/"
+          check_endpoint "Manus Webdev" "https://scrollport-xkjtdnvi.manus.space/"
 
       - name: Summarise deployment
         run: |
@@ -102,11 +103,10 @@ jobs:
           echo "╔══════════════════════════════════════════════════════════╗"
           echo "║       SCROLLVERSE TRINITY — DEPLOYMENT SUMMARY           ║"
           echo "╠══════════════════════════════════════════════════════════╣"
-          echo "║  ✅ GitHub Pages  : https://chaishillomnitech1.github.io/ ║"
-          echo "║                    scrollverse-trinity/                  ║"
-          echo "║  ✅ Manus Webdev  : https://scrollport-xkjtdnvi          ║"
-          echo "║                    .manus.space/                         ║"
-          echo "║  ✅ Standalone ZIP: uploaded as workflow artifact         ║"
+          echo "║  GitHub Pages  : https://chaishillomnitech1.github.io/   ║"
+          echo "║                  scrollverse-trinity/                    ║"
+          echo "║  Manus Webdev  : https://scrollport-xkjtdnvi.manus.space/║"
+          echo "║  Standalone ZIP: uploaded as workflow artifact            ║"
           echo "╠══════════════════════════════════════════════════════════╣"
           echo "║  Auth Methods:                                           ║"
           echo "║    ✅ HTTPS (TLS)       — all channels                   ║"
