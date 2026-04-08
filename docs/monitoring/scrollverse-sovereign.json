@@ -1,0 +1,162 @@
+{
+  "title": "ScrollVerse Sovereign Empire — Production Dashboard",
+  "description": "Real-time monitoring for the ScrollVerse Trinity Sovereign Ecosystem v3.0.0 | Supreme Sovereign: Chais Kenyatta Hill",
+  "uid": "scrollverse-sovereign-v3",
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "💰 Total Revenue (Live)",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "targets": [{
+        "expr": "sum(stripe_payment_success_total) * 9.99",
+        "legendFormat": "Total Revenue USD"
+      }],
+      "options": { "colorMode": "value", "graphMode": "area", "unit": "currencyUSD" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [
+        { "color": "green", "value": 0 },
+        { "color": "gold", "value": 10000 },
+        { "color": "purple", "value": 1000000 }
+      ]}}}
+    },
+    {
+      "id": 2,
+      "title": "🕋 Zakat Distributed (7.77%)",
+      "type": "stat",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "targets": [{
+        "expr": "sum(stripe_payment_success_total) * 9.99 * 0.0777",
+        "legendFormat": "Zakat USD"
+      }],
+      "options": { "colorMode": "value", "unit": "currencyUSD" }
+    },
+    {
+      "id": 3,
+      "title": "👥 Active Subscribers",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "targets": [{
+        "expr": "stripe_active_subscriptions_total",
+        "legendFormat": "Subscribers"
+      }],
+      "options": { "colorMode": "value", "unit": "short" }
+    },
+    {
+      "id": 4,
+      "title": "⚡ Payment Success Rate",
+      "type": "gauge",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "targets": [{
+        "expr": "rate(stripe_payment_success_total[5m]) / (rate(stripe_payment_success_total[5m]) + rate(stripe_payment_failure_total[5m])) * 100",
+        "legendFormat": "Success %"
+      }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "minVizValue": 0, "maxVizValue": 100 },
+      "fieldConfig": { "defaults": { "unit": "percent", "thresholds": { "steps": [
+        { "color": "red", "value": 0 },
+        { "color": "yellow", "value": 95 },
+        { "color": "green", "value": 99 }
+      ]}}}
+    },
+    {
+      "id": 5,
+      "title": "📈 Revenue Over Time",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "increase(stripe_payment_success_total[1h]) * 9.99", "legendFormat": "Hourly Revenue" },
+        { "expr": "increase(stripe_payment_success_total[1d]) * 9.99", "legendFormat": "Daily Revenue" }
+      ],
+      "options": { "tooltip": { "mode": "multi" } },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "palette-classic" }}}
+    },
+    {
+      "id": 6,
+      "title": "🔔 Webhook Processing Rate",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "rate(webhook_events_total[5m])", "legendFormat": "Events/sec" },
+        { "expr": "rate(webhook_errors_total[5m])", "legendFormat": "Errors/sec" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }}
+    },
+    {
+      "id": 7,
+      "title": "🚀 API Response Time (p50/p95/p99)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))", "legendFormat": "p95" },
+        { "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))", "legendFormat": "p99" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "thresholds": { "steps": [
+        { "color": "green", "value": 0 },
+        { "color": "yellow", "value": 0.2 },
+        { "color": "red", "value": 0.5 }
+      ]}}}
+    },
+    {
+      "id": 8,
+      "title": "🌐 Active API Pods (Kubernetes)",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 12, "w": 6, "h": 4 },
+      "targets": [{
+        "expr": "kube_deployment_status_replicas_available{deployment='scrollverse-api'}",
+        "legendFormat": "Active Pods"
+      }],
+      "options": { "colorMode": "value", "unit": "short" }
+    },
+    {
+      "id": 9,
+      "title": "💾 Redis Memory Usage",
+      "type": "gauge",
+      "gridPos": { "x": 18, "y": 12, "w": 6, "h": 4 },
+      "targets": [{
+        "expr": "redis_memory_used_bytes / redis_memory_max_bytes * 100",
+        "legendFormat": "Memory %"
+      }],
+      "fieldConfig": { "defaults": { "unit": "percent", "thresholds": { "steps": [
+        { "color": "green", "value": 0 },
+        { "color": "yellow", "value": 70 },
+        { "color": "red", "value": 85 }
+      ]}}}
+    },
+    {
+      "id": 10,
+      "title": "🗄️ MySQL Active Connections",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 6 },
+      "targets": [
+        { "expr": "mysql_global_status_threads_connected", "legendFormat": "Active Connections" },
+        { "expr": "mysql_global_variables_max_connections", "legendFormat": "Max Connections" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }}
+    },
+    {
+      "id": 11,
+      "title": "🚨 Active Alerts",
+      "type": "alertlist",
+      "gridPos": { "x": 0, "y": 20, "w": 24, "h": 6 },
+      "options": {
+        "alertName": "",
+        "dashboardAlerts": false,
+        "maxItems": 20,
+        "sortOrder": 1,
+        "stateFilter": { "firing": true, "pending": true }
+      }
+    }
+  ],
+  "annotations": {
+    "list": [{
+      "name": "Deployments",
+      "datasource": "Prometheus",
+      "expr": "changes(kube_deployment_status_observed_generation{deployment='scrollverse-api'}[2m]) > 0",
+      "titleFormat": "Deployment",
+      "textFormat": "ScrollVerse API deployed"
+    }]
+  }
+}

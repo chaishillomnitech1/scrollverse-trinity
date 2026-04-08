@@ -1,0 +1,206 @@
+# ScrollVerse Sovereign Empire — Production Alert Rules
+# Supreme Sovereign: Chais Kenyatta Hill
+# All alerts route to: Slack #scrollverse-alerts + PagerDuty (P1) + Email
+
+apiVersion: 1
+groups:
+  - name: scrollverse-payments
+    folder: ScrollVerse Sovereign
+    interval: 1m
+    rules:
+
+      - uid: sv-payment-success-rate
+        title: "🚨 Payment Success Rate Below 95%"
+        condition: C
+        data:
+          - refId: A
+            queryType: range
+            relativeTimeRange: { from: 300, to: 0 }
+            model:
+              expr: >
+                rate(stripe_payment_success_total[5m]) /
+                (rate(stripe_payment_success_total[5m]) + rate(stripe_payment_failure_total[5m])) * 100
+          - refId: C
+            queryType: ""
+            model:
+              conditions:
+                - evaluator: { params: [95], type: lt }
+                  operator: { type: and }
+                  query: { params: [A] }
+                  reducer: { params: [], type: last }
+                  type: query
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: "Payment success rate is {{ $values.A.Value | printf \"%.1f\" }}% — below 95% threshold"
+          description: "Immediate action required. Check Stripe Dashboard for payment failures."
+          runbook_url: "https://github.com/chaishillomnitech1/scrollverse-trinity/docs/runbooks/payment-failures.md"
+        labels:
+          severity: critical
+          team: payments
+
+      - uid: sv-webhook-errors
+        title: "🔔 Webhook Processing Errors Detected"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            model:
+              expr: increase(webhook_errors_total[5m])
+          - refId: C
+            model:
+              conditions:
+                - evaluator: { params: [0], type: gt }
+                  query: { params: [A] }
+                  reducer: { type: last }
+                  type: query
+        for: 1m
+        annotations:
+          summary: "{{ $values.A.Value }} webhook errors in last 5 minutes"
+          description: "Check server logs for webhook processing failures. Stripe will retry."
+        labels:
+          severity: warning
+          team: payments
+
+      - uid: sv-api-latency
+        title: "⚡ API Latency p99 Exceeds 500ms"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            model:
+              expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))
+          - refId: C
+            model:
+              conditions:
+                - evaluator: { params: [0.5], type: gt }
+                  query: { params: [A] }
+                  reducer: { type: last }
+                  type: query
+        for: 5m
+        annotations:
+          summary: "API p99 latency is {{ $values.A.Value | printf \"%.0f\" }}ms"
+          description: "Check pod CPU/memory usage. Consider scaling up Kubernetes HPA."
+        labels:
+          severity: warning
+          team: infrastructure
+
+      - uid: sv-pod-count-low
+        title: "🚀 API Pod Count Below Minimum"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 60, to: 0 }
+            model:
+              expr: kube_deployment_status_replicas_available{deployment="scrollverse-api"}
+          - refId: C
+            model:
+              conditions:
+                - evaluator: { params: [10], type: lt }
+                  query: { params: [A] }
+                  reducer: { type: last }
+                  type: query
+        for: 2m
+        annotations:
+          summary: "Only {{ $values.A.Value }} API pods running — minimum is 10"
+          description: "Kubernetes HPA may be failing. Check cluster autoscaler logs."
+        labels:
+          severity: critical
+          team: infrastructure
+
+      - uid: sv-redis-memory
+        title: "💾 Redis Memory Usage Above 85%"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            model:
+              expr: redis_memory_used_bytes / redis_memory_max_bytes * 100
+          - refId: C
+            model:
+              conditions:
+                - evaluator: { params: [85], type: gt }
+                  query: { params: [A] }
+                  reducer: { type: last }
+                  type: query
+        for: 10m
+        annotations:
+          summary: "Redis memory at {{ $values.A.Value | printf \"%.1f\" }}%"
+          description: "Consider increasing Redis memory allocation or evicting stale keys."
+        labels:
+          severity: warning
+          team: infrastructure
+
+      - uid: sv-dispute-created
+        title: "⚖️ New Stripe Dispute Filed"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            model:
+              expr: increase(stripe_disputes_total[5m])
+          - refId: C
+            model:
+              conditions:
+                - evaluator: { params: [0], type: gt }
+                  query: { params: [A] }
+                  reducer: { type: last }
+                  type: query
+        for: 1m
+        annotations:
+          summary: "{{ $values.A.Value }} new dispute(s) filed in the last 5 minutes"
+          description: "Respond within 7 days to avoid automatic loss. Check Stripe Dashboard."
+          runbook_url: "https://github.com/chaishillomnitech1/scrollverse-trinity/docs/runbooks/disputes.md"
+        labels:
+          severity: critical
+          team: payments
+
+  - name: scrollverse-scaling
+    folder: ScrollVerse Sovereign
+    interval: 5m
+    rules:
+
+      - uid: sv-user-milestone-1m
+        title: "🎉 1 Million Users Milestone"
+        condition: C
+        data:
+          - refId: A
+            model:
+              expr: stripe_active_subscriptions_total
+          - refId: C
+            model:
+              conditions:
+                - evaluator: { params: [1000000], type: gt }
+                  query: { params: [A] }
+                  reducer: { type: last }
+                  type: query
+        for: 1m
+        annotations:
+          summary: "SOVEREIGN MILESTONE: 1,000,000 active subscribers achieved!"
+          description: "ScrollVerse has reached 1M users. Monthly revenue: $9.99M. Zakat: $776K."
+        labels:
+          severity: info
+          team: all
+
+      - uid: sv-user-milestone-10m
+        title: "👑 10 Million Users Milestone"
+        condition: C
+        data:
+          - refId: A
+            model:
+              expr: stripe_active_subscriptions_total
+          - refId: C
+            model:
+              conditions:
+                - evaluator: { params: [10000000], type: gt }
+                  query: { params: [A] }
+                  reducer: { type: last }
+                  type: query
+        for: 1m
+        annotations:
+          summary: "SUPREME MILESTONE: 10,000,000 active subscribers achieved!"
+          description: "ScrollVerse has reached 10M users. Monthly revenue: $99.9M. Zakat: $7.76M."
+        labels:
+          severity: info
+          team: all
