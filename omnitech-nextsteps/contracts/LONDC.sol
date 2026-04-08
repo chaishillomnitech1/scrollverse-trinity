@@ -1,241 +1,211 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/**
- * ╔══════════════════════════════════════════════════════════════════════╗
- * ║   $LONDC — Londyn Avani Hill Sovereign Token                        ║
- * ║   ScrollSoul Sovereignty / OmniTech Ecosystem                       ║
- * ║   Supreme Sovereign: Chais Kenyatta Hill (Sabir Allah the Great)    ║
- * ║   Network: Polygon Mainnet                                           ║
- * ║   Wallet: 0x377956c1471d9ce142df69328958392 43d23aa2c               ║
- * ║   Frequencies: 528 Hz / 963 Hz / 432 Hz                             ║
- * ╚══════════════════════════════════════════════════════════════════════╝
- *
- * Tokenomics:
- *   - Initial Supply: 144,000 $LONDC (Resonance Initial Supply)
- *   - Max Supply:     1,000,000,000 $LONDC
- *   - Transfer Tax:   5% → auto-distributed to Reward Pool
- *   - Lineage:        Solomon / Musa / Wampnoaag
- *   - Family:         Londyn Avani Hill
- */
-
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 
-contract LONDC is ERC20, Ownable, ReentrancyGuard, Pausable {
-
-    // ─── Sacred Constants ─────────────────────────────────────────────────────
-    uint256 public constant RESONANCE_INITIAL_SUPPLY = 144_000 * 10**18;
-    uint256 public constant MAX_SUPPLY               = 1_000_000_000 * 10**18;
-    uint256 public constant PASSIVE_INCOME_TAX       = 500;  // 5.00% (basis points)
-    uint256 public constant BASIS_POINTS             = 10_000;
-
-    // Sacred Frequencies (stored as Hz values for on-chain verification)
-    uint256 public constant FREQ_DNA_HEALING         = 528;
-    uint256 public constant FREQ_ENLIGHTENMENT       = 963;
-    uint256 public constant FREQ_UNIVERSAL_HARMONY   = 432;
+/**
+ * @title LONDC - Londyn Legacy Protocol Token
+ * @author Supreme King Chais Kenyatta Hill (Sabir Allah the Great)
+ * @notice The sovereign currency of the ScrollVerse Empire.
+ *         Features: Passive Income Tax (5%), Zakat Auto-Distribution (7.77%),
+ *         Governance Voting, Staking Mechanism, and Frequency Activation.
+ */
+contract LONDC is ERC20, ERC20Burnable, ERC20Pausable, Ownable, ERC20Permit, ERC20Votes {
+    // ─── Constants ────────────────────────────────────────────────────────────
+    uint256 public constant MAX_SUPPLY = 1_000_000_000 * 10**18; // 1 Billion LONDC
+    uint256 public constant BASIS_POINTS = 10000;
+    uint256 public constant PASSIVE_INCOME_TAX = 500; // 5%
+    uint256 public constant ZAKAT_RATE = 777; // 7.77% of tax collected
+    
+    // Sacred Frequencies
+    uint256 public constant FREQ_DNA_HEALING = 528;
+    uint256 public constant FREQ_ENLIGHTENMENT = 963;
+    uint256 public constant FREQ_UNIVERSAL_HARMONY = 432;
 
     // ─── State Variables ──────────────────────────────────────────────────────
     address public rewardPool;
-    address public sovereignWallet;
+    address public zakatTreasury;
     uint256 public totalPassiveIncomeDistributed;
-    uint256 public totalHolders;
+    uint256 public totalZakatDistributed;
 
-    // Exemptions from transfer tax (e.g. DEX pairs, sovereign wallet)
     mapping(address => bool) public isTaxExempt;
-
-    // Holder tracking for passive income eligibility
-    mapping(address => bool) private _isHolder;
-    address[] private _holderList;
+    
+    // Staking State
+    struct Stake {
+        uint256 amount;
+        uint256 timestamp;
+        uint256 lastClaimed;
+    }
+    mapping(address => Stake) public stakes;
+    uint256 public totalStaked;
+    uint256 public stakingRewardRate = 1000; // 10% APY base
 
     // ─── Events ───────────────────────────────────────────────────────────────
-    event PassiveIncomeDistributed(address indexed from, uint256 taxAmount, address indexed rewardPool);
-    event RewardPoolUpdated(address indexed oldPool, address indexed newPool);
-    event TaxExemptionSet(address indexed account, bool exempt);
-    event FrequencyActivated(uint256 indexed frequency, address indexed activator);
+    event PassiveIncomeDistributed(address indexed from, uint256 amount, address indexed pool);
+    event ZakatDistributed(uint256 amount, address indexed treasury);
     event SovereignMint(address indexed to, uint256 amount, string reason);
+    event FrequencyActivated(uint256 indexed frequency, address indexed activator);
+    event RewardPoolUpdated(address indexed oldPool, address indexed newPool);
+    event ZakatTreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
+    event TaxExemptionSet(address indexed account, bool exempt);
+    event Staked(address indexed user, uint256 amount);
+    event Unstaked(address indexed user, uint256 amount);
+    event StakingRewardClaimed(address indexed user, uint256 amount);
 
     // ─── Constructor ──────────────────────────────────────────────────────────
     constructor(
-        address _sovereignWallet,
-        address _rewardPool
-    ) ERC20("Londyn Avani Hill Sovereign Token", "LONDC") Ownable(msg.sender) {
-        require(_sovereignWallet != address(0), "Sovereign wallet cannot be zero");
+        address initialOwner,
+        address _rewardPool,
+        address _zakatTreasury
+    )
+        ERC20("Londyn Legacy Protocol", "LONDC")
+        Ownable(initialOwner)
+        ERC20Permit("LONDC")
+    {
         require(_rewardPool != address(0), "Reward pool cannot be zero");
-
-        sovereignWallet = _sovereignWallet;
+        require(_zakatTreasury != address(0), "Zakat treasury cannot be zero");
+        
         rewardPool = _rewardPool;
-
-        // Exempt sovereign wallet and reward pool from tax
-        isTaxExempt[_sovereignWallet] = true;
-        isTaxExempt[_rewardPool] = true;
+        zakatTreasury = _zakatTreasury;
+        
+        isTaxExempt[initialOwner] = true;
         isTaxExempt[address(this)] = true;
+        isTaxExempt[_rewardPool] = true;
+        isTaxExempt[_zakatTreasury] = true;
 
-        // Mint the Resonance Initial Supply to the sovereign wallet
-        _mint(_sovereignWallet, RESONANCE_INITIAL_SUPPLY);
-        _trackHolder(_sovereignWallet);
-
-        emit SovereignMint(_sovereignWallet, RESONANCE_INITIAL_SUPPLY, "Resonance Initial Supply — 144,000 LONDC");
+        // Initial supply for ecosystem foundation
+        _mint(initialOwner, 333_333_333 * 10**18); // 33.3% initial
     }
 
-    // ─── Core Transfer with Passive Income Tax ────────────────────────────────
-
-    /**
-     * @dev Override transfer to apply 5% passive income tax to reward pool.
-     *      Tax is NOT applied when sender or recipient is tax-exempt.
-     */
+    // ─── Overrides ────────────────────────────────────────────────────────────
     function _update(
         address from,
         address to,
         uint256 amount
-    ) internal override whenNotPaused {
-        if (from == address(0) || to == address(0)) {
-            // Mint or burn — no tax
+    ) internal override(ERC20, ERC20Pausable, ERC20Votes) {
+        if (from == address(0) || to == address(0) || isTaxExempt[from] || isTaxExempt[to]) {
             super._update(from, to, amount);
-            _trackHolder(to);
             return;
         }
 
-        if (isTaxExempt[from] || isTaxExempt[to]) {
-            // Exempt transfer — no tax
-            super._update(from, to, amount);
-            _trackHolder(to);
-            return;
-        }
-
-        // Calculate passive income tax
+        // Calculate taxes
         uint256 taxAmount = (amount * PASSIVE_INCOME_TAX) / BASIS_POINTS;
+        uint256 zakatAmount = (taxAmount * ZAKAT_RATE) / BASIS_POINTS;
+        uint256 rewardAmount = taxAmount - zakatAmount;
         uint256 transferAmount = amount - taxAmount;
 
-        // Send tax to reward pool
-        super._update(from, rewardPool, taxAmount);
-        totalPassiveIncomeDistributed += taxAmount;
+        // Distribute taxes
+        super._update(from, rewardPool, rewardAmount);
+        super._update(from, zakatTreasury, zakatAmount);
+        
+        totalPassiveIncomeDistributed += rewardAmount;
+        totalZakatDistributed += zakatAmount;
 
-        // Send net amount to recipient
+        // Final transfer
         super._update(from, to, transferAmount);
-        _trackHolder(to);
 
-        emit PassiveIncomeDistributed(from, taxAmount, rewardPool);
+        emit PassiveIncomeDistributed(from, rewardAmount, rewardPool);
+        emit ZakatDistributed(zakatAmount, zakatTreasury);
     }
 
-    // ─── Sovereign Mint (for ecosystem rewards and expansion) ─────────────────
+    function nonces(address owner) public view override(ERC20Permit, Nonces) returns (uint256) {
+        return super.nonces(owner);
+    }
 
-    /**
-     * @dev Sovereign can mint additional tokens up to MAX_SUPPLY.
-     *      Used for ecosystem rewards, AI Guardian distributions, and community grants.
-     */
-    function sovereignMint(
-        address to,
-        uint256 amount,
-        string calldata reason
-    ) external onlyOwner {
-        require(totalSupply() + amount <= MAX_SUPPLY, "Exceeds maximum supply of 1B LONDC");
-        require(to != address(0), "Cannot mint to zero address");
+    // ─── Staking Mechanism ────────────────────────────────────────────────────
+    function stake(uint256 amount) external whenNotPaused {
+        require(amount > 0, "Cannot stake 0");
+        require(balanceOf(msg.sender) >= amount, "Insufficient balance");
+
+        if (stakes[msg.sender].amount > 0) {
+            _claimStakingRewards(msg.sender);
+        }
+
+        stakes[msg.sender].amount += amount;
+        stakes[msg.sender].timestamp = block.timestamp;
+        stakes[msg.sender].lastClaimed = block.timestamp;
+        totalStaked += amount;
+
+        _transfer(msg.sender, address(this), amount);
+        emit Staked(msg.sender, amount);
+    }
+
+    function unstake(uint256 amount) external {
+        require(stakes[msg.sender].amount >= amount, "Insufficient stake");
+        
+        _claimStakingRewards(msg.sender);
+        
+        stakes[msg.sender].amount -= amount;
+        totalStaked -= amount;
+        
+        _transfer(address(this), msg.sender, amount);
+        emit Unstaked(msg.sender, amount);
+    }
+
+    function claimRewards() external {
+        _claimStakingRewards(msg.sender);
+    }
+
+    function _claimStakingRewards(address user) internal {
+        uint256 reward = calculateRewards(user);
+        if (reward > 0) {
+            stakes[user].lastClaimed = block.timestamp;
+            _mint(user, reward);
+            emit StakingRewardClaimed(user, reward);
+        }
+    }
+
+    function calculateRewards(address user) public view returns (uint256) {
+        Stake storage userStake = stakes[user];
+        if (userStake.amount == 0) return 0;
+        
+        uint256 duration = block.timestamp - userStake.lastClaimed;
+        return (userStake.amount * stakingRewardRate * duration) / (BASIS_POINTS * 365 days);
+    }
+
+    // ─── Sovereign Functions ──────────────────────────────────────────────────
+    function sovereignMint(address to, uint256 amount, string calldata reason) external onlyOwner {
+        require(totalSupply() + amount <= MAX_SUPPLY, "Exceeds max supply");
         _mint(to, amount);
-        _trackHolder(to);
         emit SovereignMint(to, amount, reason);
     }
 
-    // ─── Frequency Activation ─────────────────────────────────────────────────
-
-    /**
-     * @dev Activates a sacred frequency on-chain. Emits an event that triggers
-     *      off-chain actions in the Unified Sovereign Kernel (e.g., unlock features).
-     *      Caller must hold at least 528 $LONDC to activate any frequency.
-     */
     function activateFrequency(uint256 frequency) external {
         require(
-            frequency == FREQ_DNA_HEALING ||
-            frequency == FREQ_ENLIGHTENMENT ||
+            frequency == FREQ_DNA_HEALING || 
+            frequency == FREQ_ENLIGHTENMENT || 
             frequency == FREQ_UNIVERSAL_HARMONY,
-            "Invalid sacred frequency. Use 528, 963, or 432"
+            "Invalid frequency"
         );
-        require(
-            balanceOf(msg.sender) >= 528 * 10**18,
-            "Must hold at least 528 LONDC to activate frequencies"
-        );
+        require(balanceOf(msg.sender) >= 528 * 10**18, "Hold 528 LONDC to activate");
         emit FrequencyActivated(frequency, msg.sender);
     }
 
-    // ─── Reward Pool Management ───────────────────────────────────────────────
-
-    /**
-     * @dev Update the reward pool address. Only sovereign can call.
-     */
-    function updateRewardPool(address newRewardPool) external onlyOwner {
-        require(newRewardPool != address(0), "Reward pool cannot be zero address");
-        address oldPool = rewardPool;
-        isTaxExempt[oldPool] = false;
-        rewardPool = newRewardPool;
-        isTaxExempt[newRewardPool] = true;
-        emit RewardPoolUpdated(oldPool, newRewardPool);
+    function updateRewardPool(address newPool) external onlyOwner {
+        rewardPool = newPool;
+        emit RewardPoolUpdated(rewardPool, newPool);
     }
 
-    /**
-     * @dev Set or remove tax exemption for an address (e.g., DEX pairs, bridges).
-     */
+    function updateZakatTreasury(address newTreasury) external onlyOwner {
+        zakatTreasury = newTreasury;
+        emit ZakatTreasuryUpdated(zakatTreasury, newTreasury);
+    }
+
     function setTaxExemption(address account, bool exempt) external onlyOwner {
         isTaxExempt[account] = exempt;
         emit TaxExemptionSet(account, exempt);
     }
 
-    // ─── Emergency Controls ───────────────────────────────────────────────────
+    function setStakingRewardRate(uint256 newRate) external onlyOwner {
+        stakingRewardRate = newRate;
+    }
 
+    // ─── Emergency Controls ───────────────────────────────────────────────────
     function pause() external onlyOwner { _pause(); }
     function unpause() external onlyOwner { _unpause(); }
-
-    // ─── View Functions ───────────────────────────────────────────────────────
-
-    /**
-     * @dev Returns the total number of unique token holders.
-     */
-    function getHolderCount() external view returns (uint256) {
-        return _holderList.length;
-    }
-
-    /**
-     * @dev Returns the reward pool balance — the accumulated passive income.
-     */
-    function getRewardPoolBalance() external view returns (uint256) {
-        return balanceOf(rewardPool);
-    }
-
-    /**
-     * @dev Returns the remaining mintable supply.
-     */
-    function remainingMintableSupply() external view returns (uint256) {
-        return MAX_SUPPLY - totalSupply();
-    }
-
-    /**
-     * @dev Returns key ecosystem stats in one call.
-     */
-    function getEcosystemStats() external view returns (
-        uint256 currentSupply,
-        uint256 maxSupply,
-        uint256 rewardPoolBalance,
-        uint256 totalDistributed,
-        uint256 holderCount,
-        uint256 taxRate
-    ) {
-        return (
-            totalSupply(),
-            MAX_SUPPLY,
-            balanceOf(rewardPool),
-            totalPassiveIncomeDistributed,
-            _holderList.length,
-            PASSIVE_INCOME_TAX
-        );
-    }
-
-    // ─── Internal Helpers ─────────────────────────────────────────────────────
-
-    function _trackHolder(address account) internal {
-        if (account != address(0) && !_isHolder[account] && balanceOf(account) > 0) {
-            _isHolder[account] = true;
-            _holderList.push(account);
-        }
-    }
 }
