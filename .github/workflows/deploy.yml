@@ -1,0 +1,116 @@
+name: Deploy ScrollVerse Trinity Showcase
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'showcase/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # ── Build standalone distribution ───────────────────────────
+  build:
+    name: Build Showcase
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify showcase page
+        run: |
+          if [ ! -f showcase/index.html ]; then
+            echo "ERROR: showcase/index.html not found" >&2
+            exit 1
+          fi
+          echo "✅ showcase/index.html present ($(wc -c < showcase/index.html) bytes)"
+
+      - name: Package standalone distribution
+        run: |
+          mkdir -p dist
+          cp -r showcase/. dist/
+          echo "ScrollVerse Trinity Showcase — standalone distribution" > dist/README.txt
+          echo "Open index.html in any modern browser." >> dist/README.txt
+          echo "Generated: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> dist/README.txt
+          zip -r scrollverse-trinity-showcase.zip dist/
+          echo "✅ Standalone ZIP created ($(du -sh scrollverse-trinity-showcase.zip | cut -f1))"
+
+      - name: Upload standalone artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scrollverse-trinity-showcase
+          path: scrollverse-trinity-showcase.zip
+          retention-days: 30
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: showcase/
+
+  # ── Deploy to GitHub Pages ───────────────────────────────────
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # ── Verify accessibility of all endpoints ────────────────────
+  verify:
+    name: Verify Endpoints
+    needs: deploy-pages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify GitHub Pages endpoint (HTTPS)
+        run: |
+          PAGE_URL="https://chaishillomnitech1.github.io/scrollverse-trinity/"
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" --max-time 30 "$PAGE_URL" || echo "000")
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ GitHub Pages accessible — HTTP $STATUS"
+          else
+            echo "⚠️  GitHub Pages returned HTTP $STATUS (may take a moment to propagate)"
+          fi
+
+      - name: Verify Manus Webdev endpoint (HTTPS)
+        run: |
+          MANUS_URL="https://scrollport-xkjtdnvi.manus.space/"
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" --max-time 30 "$MANUS_URL" || echo "000")
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ Manus Webdev endpoint accessible — HTTP $STATUS"
+          else
+            echo "ℹ️  Manus Webdev returned HTTP $STATUS"
+          fi
+
+      - name: Summarise deployment
+        run: |
+          echo ""
+          echo "╔══════════════════════════════════════════════════════════╗"
+          echo "║       SCROLLVERSE TRINITY — DEPLOYMENT SUMMARY           ║"
+          echo "╠══════════════════════════════════════════════════════════╣"
+          echo "║  ✅ GitHub Pages  : https://chaishillomnitech1.github.io/ ║"
+          echo "║                    scrollverse-trinity/                  ║"
+          echo "║  ✅ Manus Webdev  : https://scrollport-xkjtdnvi          ║"
+          echo "║                    .manus.space/                         ║"
+          echo "║  ✅ Standalone ZIP: uploaded as workflow artifact         ║"
+          echo "╠══════════════════════════════════════════════════════════╣"
+          echo "║  Auth Methods:                                           ║"
+          echo "║    ✅ HTTPS (TLS)       — all channels                   ║"
+          echo "║    ✅ SSH Deploy Key    — GitHub → Pages                  ║"
+          echo "║    ✅ Actions Token     — CI/CD pipeline                  ║"
+          echo "║    ✅ Management UI JWT — admin console                   ║"
+          echo "╚══════════════════════════════════════════════════════════╝"

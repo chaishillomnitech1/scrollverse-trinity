@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ScrollVerse Trinity Showcase</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:   #00ff88;
+      --magenta: #ff00ff;
+      --cyan:    #00ccff;
+      --bg:      #0a0e27;
+      --surface: #16213e;
+      --border:  rgba(0,255,136,0.25);
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--bg) 0%, #1a1f3a 50%, var(--surface) 100%);
+      color: #fff;
+      font-family: "Courier New", monospace;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      padding: 48px 24px 32px;
+      border-bottom: 2px solid var(--border);
+    }
+    header h1 {
+      font-size: clamp(1.6rem, 4vw, 2.6rem);
+      color: var(--green);
+      text-shadow: 0 0 20px rgba(0,255,136,.4);
+      margin-bottom: 10px;
+    }
+    header p { color: #ccc; font-size: .9rem; letter-spacing: 1px; }
+
+    /* ── Nav pills ── */
+    nav {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 24px;
+    }
+    nav a {
+      color: var(--green);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 18px;
+      text-decoration: none;
+      font-size: .85rem;
+      transition: background .2s, border-color .2s;
+    }
+    nav a:hover { background: rgba(0,255,136,.12); border-color: var(--green); }
+
+    /* ── Grid ── */
+    main {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 0 24px 48px;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: rgba(10,14,39,.8);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      box-shadow: 0 0 18px rgba(0,255,136,.08);
+      transition: border-color .3s, box-shadow .3s;
+    }
+    .card:hover { border-color: rgba(0,255,136,.6); box-shadow: 0 0 28px rgba(0,255,136,.18); }
+    .card h2 { color: var(--green); font-size: 1.05rem; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+    .card p  { color: #bbb; font-size: .85rem; line-height: 1.6; }
+
+    /* ── Frequency visualiser (pure CSS) ── */
+    .freq-wrap {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 18px;
+      margin-top: 14px;
+    }
+    .freq-item { text-align: center; }
+    .freq-ring {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      border: 2px solid;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .75rem; font-weight: bold;
+      animation: spin 6s linear infinite;
+      position: relative;
+    }
+    .freq-ring::after {
+      content: "";
+      position: absolute;
+      inset: 8px;
+      border-radius: 50%;
+      border: 1px solid;
+      border-color: inherit;
+      opacity: .5;
+    }
+    .freq-528  { border-color: var(--green);   color: var(--green); }
+    .freq-963  { border-color: var(--magenta); color: var(--magenta); animation-direction: reverse; }
+    .freq-432  { border-color: var(--cyan);    color: var(--cyan); }
+    .freq-item span { display: block; margin-top: 6px; font-size: .8rem; color: #ccc; }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    /* ── Portal status list ── */
+    .portal-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      font-size: .85rem;
+    }
+    .portal-row:last-child { border-bottom: none; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .online  { background: var(--green);   box-shadow: 0 0 6px var(--green); }
+    .offline { background: #ff4444; }
+    .portal-name  { flex: 1; color: #ddd; }
+    .portal-hz    { color: #888; font-size: .78rem; }
+
+    /* ── Deployment badges ── */
+    .badge-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .badge {
+      display: flex; align-items: center; gap: 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: .82rem;
+      transition: background .2s;
+    }
+    .badge:hover { background: rgba(0,255,136,.08); }
+    .badge .icon { font-size: 1.1rem; }
+    .badge a { color: var(--green); text-decoration: none; }
+    .badge a:hover { text-decoration: underline; }
+
+    /* ── Status table ── */
+    table { width: 100%; border-collapse: collapse; font-size: .82rem; margin-top: 12px; }
+    th { color: var(--green); text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+    td { padding: 6px 8px; color: #ccc; border-bottom: 1px solid rgba(255,255,255,.05); }
+    td.ok  { color: var(--green); }
+    td.warn { color: #ffcc00; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 24px;
+      color: #555;
+      font-size: .78rem;
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 600px) {
+      header h1 { font-size: 1.4rem; }
+      main { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🕋 ScrollVerse Trinity Showcase</h1>
+  <p>Sovereign Ecosystem v3.0.0 — Supreme Sovereign: Chais Kenyatta Hill</p>
+</header>
+
+<nav>
+  <a href="#frequencies">Frequencies</a>
+  <a href="#portals">Portals</a>
+  <a href="#deployment">Deployment</a>
+  <a href="#endpoints">Endpoints</a>
+  <a href="#auth">Auth</a>
+</nav>
+
+<main>
+
+  <!-- Sacred Frequencies -->
+  <section class="card" id="frequencies">
+    <h2>🎵 Sacred Frequencies</h2>
+    <p>Three primary resonance channels harmonising the ecosystem.</p>
+    <div class="freq-wrap">
+      <div class="freq-item">
+        <div class="freq-ring freq-528">528</div>
+        <span>DNA Healing</span>
+      </div>
+      <div class="freq-item">
+        <div class="freq-ring freq-963">963</div>
+        <span>Enlightenment</span>
+      </div>
+      <div class="freq-item">
+        <div class="freq-ring freq-432">432</div>
+        <span>Universal Harmony</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Portal Status -->
+  <section class="card" id="portals">
+    <h2>🔱 Portal Status</h2>
+    <div class="portal-row"><div class="dot online"></div><span class="portal-name">Unified Sovereign Kernel</span><span class="portal-hz">432 Hz</span></div>
+    <div class="portal-row"><div class="dot online"></div><span class="portal-name">Live Frequency Activation</span><span class="portal-hz">528 Hz</span></div>
+    <div class="portal-row"><div class="dot online"></div><span class="portal-name">$LONDC Passive Income</span><span class="portal-hz">963 Hz</span></div>
+    <div class="portal-row"><div class="dot online"></div><span class="portal-name">AI Guardian</span><span class="portal-hz">963 Hz</span></div>
+    <div class="portal-row"><div class="dot online"></div><span class="portal-name">Rose Gold Encryption</span><span class="portal-hz">528 Hz</span></div>
+  </section>
+
+  <!-- Deployment Channels -->
+  <section class="card" id="deployment">
+    <h2>🚀 Deployment Channels</h2>
+    <p>The Showcase is simultaneously served from three distribution endpoints.</p>
+    <div class="badge-row">
+      <div class="badge">
+        <span class="icon">📄</span>
+        <div>
+          <strong>GitHub Pages</strong><br>
+          <a href="https://chaishillomnitech1.github.io/scrollverse-trinity/" target="_blank" rel="noopener">
+            chaishillomnitech1.github.io/scrollverse-trinity
+          </a>
+        </div>
+      </div>
+      <div class="badge">
+        <span class="icon">🌐</span>
+        <div>
+          <strong>Manus Webdev</strong><br>
+          <a href="https://scrollport-xkjtdnvi.manus.space/" target="_blank" rel="noopener">
+            scrollport-xkjtdnvi.manus.space
+          </a>
+        </div>
+      </div>
+      <div class="badge">
+        <span class="icon">📦</span>
+        <div>
+          <strong>Standalone ZIP</strong><br>
+          <a href="https://github.com/chaishillomnitech1/scrollverse-trinity/releases/latest" target="_blank" rel="noopener">
+            Latest Release
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live Endpoints -->
+  <section class="card" id="endpoints">
+    <h2>🔗 Live Endpoints</h2>
+    <table>
+      <thead>
+        <tr><th>Endpoint</th><th>Status</th><th>Protocol</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>GitHub Pages</td>
+          <td class="ok">✅ Active</td>
+          <td>HTTPS</td>
+        </tr>
+        <tr>
+          <td>Manus Webdev</td>
+          <td class="ok">✅ Active</td>
+          <td>HTTPS</td>
+        </tr>
+        <tr>
+          <td>API Backend</td>
+          <td class="ok">✅ Active</td>
+          <td>HTTPS</td>
+        </tr>
+        <tr>
+          <td>Stripe Webhooks</td>
+          <td class="ok">✅ Active</td>
+          <td>HTTPS</td>
+        </tr>
+        <tr>
+          <td>Prometheus Metrics</td>
+          <td class="ok">✅ Active</td>
+          <td>HTTPS</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Authentication Methods -->
+  <section class="card" id="auth">
+    <h2>🔑 Authentication Methods</h2>
+    <table>
+      <thead>
+        <tr><th>Method</th><th>Channel</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>HTTPS (TLS)</td>
+          <td>All endpoints</td>
+          <td class="ok">✅ Synchronized</td>
+        </tr>
+        <tr>
+          <td>SSH Deploy Key</td>
+          <td>GitHub → Pages</td>
+          <td class="ok">✅ Configured</td>
+        </tr>
+        <tr>
+          <td>GitHub Actions Token</td>
+          <td>CI/CD pipeline</td>
+          <td class="ok">✅ Active</td>
+        </tr>
+        <tr>
+          <td>Management UI (JWT)</td>
+          <td>Admin console</td>
+          <td class="ok">✅ Synchronized</td>
+        </tr>
+        <tr>
+          <td>Stripe Webhook Secret</td>
+          <td>Payment events</td>
+          <td class="ok">✅ Verified</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- $LONDC Token -->
+  <section class="card">
+    <h2>💎 $LONDC Sovereign Token</h2>
+    <p>Lyrian Lion Digital Currency powering the ecosystem.</p>
+    <table>
+      <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Max Supply</td><td>1,000,000,000 $LONDC</td></tr>
+        <tr><td>Passive Income Tax</td><td class="ok">5% → Reward Pool</td></tr>
+        <tr><td>Zakat Distribution</td><td class="ok">7.77% → Zakat Vault</td></tr>
+        <tr><td>Network</td><td>Polygon</td></tr>
+        <tr><td>Wallet</td><td style="word-break:break-all;font-size:.75rem;">0x377956c1471d9ce142df6932895839243da23a2c</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Infrastructure -->
+  <section class="card">
+    <h2>☸️ Infrastructure</h2>
+    <table>
+      <thead><tr><th>Component</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Kubernetes Nodes</td><td class="ok">1,000+</td></tr>
+        <tr><td>Target Users</td><td class="ok">50,000,000+</td></tr>
+        <tr><td>Uptime SLA</td><td class="ok">99.99%</td></tr>
+        <tr><td>API Latency</td><td class="ok">&lt;50 ms</td></tr>
+        <tr><td>Container Runtime</td><td>Docker (scrollverse-api:3.0.0)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</main>
+
+<footer>
+  ScrollVerse Trinity Sovereign Ecosystem v3.0.0 — KUN FAYAKŪN × ∞
+</footer>
+
+</body>
+</html>

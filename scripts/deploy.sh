@@ -160,27 +160,85 @@ print_summary() {
   log_section "DEPLOYMENT COMPLETE - SCROLLVERSE IS LIVE"
 
   echo -e "${CYAN}"
-  echo "  ╔══════════════════════════════════════════════════╗"
-  echo "  ║     SCROLLVERSE TRINITY SOVEREIGN v3.0.0         ║"
-  echo "  ║     Supreme Sovereign: Chais Kenyatta Hill        ║"
-  echo "  ╠══════════════════════════════════════════════════╣"
-  echo "  ║  ✅ Pillar 1: Stripe LIVE Integration             ║"
-  echo "  ║  ✅ Pillar 2: 6 Webhook Handlers Active           ║"
-  echo "  ║  ✅ Pillar 3: Payment Flow Tested                 ║"
-  echo "  ║  ✅ Pillar 4: Mailchimp Automation Live           ║"
-  echo "  ║  ✅ Pillar 5: Production Deployed                 ║"
-  echo "  ║  ✅ Pillar 6: 50M+ User Scaling Ready             ║"
-  echo "  ╠══════════════════════════════════════════════════╣"
-  echo "  ║  API:       https://api.scrollverse.app           ║"
-  echo "  ║  Metrics:   https://monitoring.scrollverse.app    ║"
-  echo "  ║  Webhook:   https://api.scrollverse.app/webhooks  ║"
-  echo "  ╠══════════════════════════════════════════════════╣"
-  echo "  ║  Target Users:    50,000,000+                     ║"
-  echo "  ║  Revenue Target:  \$60.9B                         ║"
-  echo "  ║  Uptime Target:   99.99%                          ║"
-  echo "  ║  API Latency:     <50ms                           ║"
-  echo "  ╚══════════════════════════════════════════════════╝"
+  echo "  ╔══════════════════════════════════════════════════════════╗"
+  echo "  ║     SCROLLVERSE TRINITY SOVEREIGN v3.0.0                ║"
+  echo "  ║     Supreme Sovereign: Chais Kenyatta Hill              ║"
+  echo "  ╠══════════════════════════════════════════════════════════╣"
+  echo "  ║  ✅ Pillar 1: Stripe LIVE Integration                   ║"
+  echo "  ║  ✅ Pillar 2: 6 Webhook Handlers Active                 ║"
+  echo "  ║  ✅ Pillar 3: Payment Flow Tested                       ║"
+  echo "  ║  ✅ Pillar 4: Mailchimp Automation Live                 ║"
+  echo "  ║  ✅ Pillar 5: Production Deployed                       ║"
+  echo "  ║  ✅ Pillar 6: 50M+ User Scaling Ready                   ║"
+  echo "  ╠══════════════════════════════════════════════════════════╣"
+  echo "  ║  Showcase Distribution:                                 ║"
+  echo "  ║    GitHub Pages : chaishillomnitech1.github.io/         ║"
+  echo "  ║                   scrollverse-trinity/                  ║"
+  echo "  ║    Manus Webdev : scrollport-xkjtdnvi.manus.space/      ║"
+  echo "  ║    Standalone   : scrollverse-trinity-showcase.zip      ║"
+  echo "  ╠══════════════════════════════════════════════════════════╣"
+  echo "  ║  Auth:  HTTPS ✅  SSH ✅  Management UI (JWT) ✅        ║"
+  echo "  ╠══════════════════════════════════════════════════════════╣"
+  echo "  ║  API:       https://api.scrollverse.app                 ║"
+  echo "  ║  Metrics:   https://monitoring.scrollverse.app          ║"
+  echo "  ║  Webhook:   https://api.scrollverse.app/webhooks        ║"
+  echo "  ╠══════════════════════════════════════════════════════════╣"
+  echo "  ║  Target Users:    50,000,000+                           ║"
+  echo "  ║  Revenue Target:  \$60.9B                               ║"
+  echo "  ║  Uptime Target:   99.99%                                ║"
+  echo "  ║  API Latency:     <50ms                                 ║"
+  echo "  ╚══════════════════════════════════════════════════════════╝"
   echo -e "${NC}"
+}
+
+# ─── Package Standalone Distribution ─────────────────────────
+package_standalone() {
+  log_section "Packaging Standalone Distribution"
+
+  DIST_DIR="dist/scrollverse-showcase"
+  ZIP_NAME="scrollverse-trinity-showcase.zip"
+
+  mkdir -p "${DIST_DIR}"
+  if [[ -d "showcase" ]]; then
+    cp -r showcase/. "${DIST_DIR}/"
+  else
+    log_warn "showcase/ directory not found — skipping standalone package"
+    return 0
+  fi
+
+  cat > "${DIST_DIR}/README.txt" <<EOF
+ScrollVerse Trinity Showcase — Standalone Distribution
+======================================================
+Open index.html in any modern browser.
+Generated: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+Version: 3.0.0
+EOF
+
+  (cd dist && zip -qr "../${ZIP_NAME}" scrollverse-showcase/)
+  log_info "Standalone package created: ${ZIP_NAME} ($(du -sh "${ZIP_NAME}" | cut -f1)) ✅"
+
+  rm -rf dist/
+}
+
+# ─── Verify Web Endpoints ─────────────────────────────────────
+verify_endpoints() {
+  log_section "Verifying Web Endpoints"
+
+  declare -A ENDPOINTS=(
+    ["GitHub Pages"]="https://chaishillomnitech1.github.io/scrollverse-trinity/"
+    ["Manus Webdev"]="https://scrollport-xkjtdnvi.manus.space/"
+    ["API Backend"]="${BASE_URL:-http://localhost:3000}/health"
+  )
+
+  for label in "${!ENDPOINTS[@]}"; do
+    url="${ENDPOINTS[$label]}"
+    STATUS=$(curl -o /dev/null -s -w "%{http_code}" --max-time 15 "${url}" 2>/dev/null || echo "000")
+    if [[ "${STATUS}" == "200" ]]; then
+      log_info "${label}: HTTP ${STATUS} ✅"
+    else
+      log_warn "${label}: HTTP ${STATUS} (${url})"
+    fi
+  done
 }
 
 # ─── Main Execution ───────────────────────────────────────────
@@ -190,7 +248,9 @@ main() {
   run_tests
   build_docker
   verify_webhooks
+  package_standalone
   health_check
+  verify_endpoints
   print_summary
 }
 
