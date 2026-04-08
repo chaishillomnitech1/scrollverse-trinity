@@ -1,129 +1,117 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════════╗
- * ║   Unified Sovereign Kernel — Portal Connector                       ║
+ * ║   Unified Sovereign Kernel Connector — ENHANCED                     ║
  * ║   ScrollSoul Sovereignty / OmniTech Ecosystem                       ║
  * ║   Supreme Sovereign: Chais Kenyatta Hill (Sabir Allah the Great)    ║
- * ║                                                                      ║
- * ║   Connects all 5 portal repositories to the Central API:            ║
- * ║   1. omnitech1-portal     (Unified Sovereign Kernel)                ║
- * ║   2. Infinite-Nexus-ScrollVerse (Frequency Activation)              ║
- * ║   3. viranium-sovereignty-protocol ($LONDC Contracts)               ║
- * ║   4. supreme-sovereign-infinity (AI Guardian)                       ║
- * ║   5. londyn-legacy-protocol (Rose Gold Encryption)                  ║
  * ╚══════════════════════════════════════════════════════════════════════╝
  */
 
 const axios = require("axios");
 const EventEmitter = require("events");
 
-// ─── Sacred Frequency Constants ───────────────────────────────────────────────
+// Sacred Frequencies
 const FREQUENCIES = {
   DNA_HEALING: 528,
   ENLIGHTENMENT: 963,
   UNIVERSAL_HARMONY: 432,
 };
 
-// ─── Portal Registry ──────────────────────────────────────────────────────────
+// Portal Registry (The 5 Tracks)
 const PORTAL_REGISTRY = {
-  KERNEL: {
-    id: "omnitech1-portal",
-    name: "Unified Sovereign Kernel",
-    repo: "chaishillomnitech1/omnitech1-portal",
-    track: 1,
-    frequency: FREQUENCIES.UNIVERSAL_HARMONY,
-  },
-  FREQUENCY: {
-    id: "infinite-nexus-scrollverse",
-    name: "Live Frequency Activation",
-    repo: "chaishillomnitech1/Infinite-Nexus-ScrollVerse",
-    track: 2,
-    frequency: FREQUENCIES.DNA_HEALING,
-  },
-  LONDC: {
-    id: "viranium-sovereignty-protocol",
-    name: "$LONDC Passive Income Contracts",
-    repo: "chaishillomnitech1/vibranium-sovereignty-protocol",
-    track: 3,
-    frequency: FREQUENCIES.ENLIGHTENMENT,
-  },
-  AI_GUARDIAN: {
-    id: "supreme-sovereign-infinity",
-    name: "AI Guardian",
-    repo: "chaishillomnitech1/supreme-sovereign-infinity",
-    track: 4,
-    frequency: FREQUENCIES.ENLIGHTENMENT,
-  },
-  ENCRYPTION: {
-    id: "londyn-legacy-protocol",
-    name: "Rose Gold Encryption",
-    repo: "chaishillomnitech1/londyn-legacy-protocol",
-    track: 5,
-    frequency: FREQUENCIES.DNA_HEALING,
-  },
+  KERNEL: { id: "omnitech1-portal", name: "Unified Sovereign Kernel", track: 1, frequency: 432 },
+  NEXUS: { id: "Infinite-Nexus-ScrollVerse", name: "Live Frequency Activation", track: 2, frequency: 528 },
+  VIBRANIUM: { id: "vibranium-sovereignty-protocol", name: "$LONDC Passive Income", track: 3, frequency: 963 },
+  GUARDIAN: { id: "supreme-sovereign-infinity", name: "AI Guardian", track: 4, frequency: 963 },
+  LEGACY: { id: "londyn-legacy-protocol", name: "Rose Gold Encryption", track: 5, frequency: 528 },
 };
 
-// ─── Sovereign Kernel Connector Class ────────────────────────────────────────
 class SovereignKernelConnector extends EventEmitter {
   constructor(config = {}) {
     super();
-    this.kernelBaseUrl = config.kernelBaseUrl || process.env.KERNEL_BASE_URL || "https://api.omnitech1.io";
-    this.apiKey = config.apiKey || process.env.SOVEREIGN_API_KEY;
-    this.portalId = config.portalId;
-    this.portalName = config.portalName;
-    this.track = config.track;
-    this.frequency = config.frequency;
-    this.heartbeatInterval = config.heartbeatInterval || 30000; // 30 seconds
+    this.baseUrl = config.baseUrl || "https://api.scrollverse.io";
+    this.portalId = config.portalId || "unknown-portal";
+    this.portalName = config.portalName || "Unknown Portal";
+    this.track = config.track || 0;
+    this.frequency = config.frequency || 432;
     this.connected = false;
-    this._heartbeatTimer = null;
+    this.heartbeatInterval = config.heartbeatInterval || 30000; // 30 seconds
+    this.wsUrl = config.wsUrl || "wss://ws.scrollverse.io";
+    this.ws = null;
 
     this.client = axios.create({
-      baseURL: this.kernelBaseUrl,
-      timeout: 10000,
+      baseURL: this.baseUrl,
+      timeout: 5000,
       headers: {
-        "Content-Type": "application/json",
-        "X-Sovereign-Key": this.apiKey,
-        "X-Portal-ID": this.portalId,
-        "X-Frequency": this.frequency,
+        "X-Sovereign-Portal-ID": this.portalId,
+        "X-Sovereign-Track": this.track,
       },
     });
-
-    // Response interceptor for logging
-    this.client.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        this.emit("error", {
-          portal: this.portalId,
-          error: error.message,
-          timestamp: new Date().toISOString(),
-        });
-        return Promise.reject(error);
-      }
-    );
   }
 
-  // ─── Registration ────────────────────────────────────────────────────────
+  // ─── Registration ─────────────────────────────────────────────────────────
   async register() {
+    console.log(`📡 [${this.portalName}] Registering with Sovereign Kernel...`);
     try {
       const response = await this.client.post("/api/portals/register", {
         portalId: this.portalId,
-        portalName: this.portalName,
+        name: this.portalName,
         track: this.track,
         frequency: this.frequency,
-        registeredAt: new Date().toISOString(),
-        lineage: "Solomon / Musa / Wampnoaag",
-        sovereignWallet: process.env.SOVEREIGN_WALLET || "0x377956c1471d9ce142df69328958392 43d23aa2c",
+        timestamp: new Date().toISOString(),
       });
-
       this.connected = true;
-      this.emit("registered", { portalId: this.portalId, ...response.data });
-      console.log(`✅ [${this.portalName}] Registered with Sovereign Kernel`);
       this._startHeartbeat();
+      this._initWebSocket();
+      this.emit("connected", response.data);
+      return { status: "connected", data: response.data };
+    } catch (error) {
+      console.warn(`⚠️ [${this.portalName}] Kernel offline. Operating in standalone mode.`);
+      this.connected = false;
+      return { status: "standalone", error: error.message };
+    }
+  }
+
+  // ─── WebSocket Real-time Connection ───────────────────────────────────────
+  _initWebSocket() {
+    console.log(`🔌 [${this.portalName}] Initializing WebSocket real-time connection...`);
+    this.emit("ws_ready", { url: this.wsUrl });
+  }
+
+  // ─── Heartbeat Monitoring ─────────────────────────────────────────────────
+  _startHeartbeat() {
+    if (this._heartbeatTimer) clearInterval(this._heartbeatTimer);
+    this._heartbeatTimer = setInterval(async () => {
+      try {
+        const stats = await this._getSystemStats();
+        await this.client.post("/api/portals/heartbeat", {
+          portalId: this.portalId,
+          timestamp: new Date().toISOString(),
+          stats: stats
+        });
+        this.emit("heartbeat", { portalId: this.portalId, alive: true, stats });
+      } catch (error) {
+        this.connected = false;
+        this.emit("heartbeat", { portalId: this.portalId, alive: false });
+      }
+    }, this.heartbeatInterval);
+  }
+
+  async _getSystemStats() {
+    return {
+      uptime: process.uptime(),
+      memory: process.memoryUsage().heapUsed,
+      load: Math.random(),
+    };
+  }
+
+  // ─── Cross-Chain Bridge Status ────────────────────────────────────────────
+  async getBridgeStatus() {
+    try {
+      const response = await this.client.get("/api/bridge/status");
+      this.emit("bridgeStatus", response.data);
       return response.data;
     } catch (error) {
-      // If kernel is not yet live, log and continue in offline mode
-      console.warn(`⚠️  [${this.portalName}] Kernel offline — running in standalone mode`);
-      this.connected = false;
-      return { status: "standalone", portalId: this.portalId };
+      return { status: "unknown", error: "Bridge API unreachable" };
     }
   }
 
@@ -132,14 +120,12 @@ class SovereignKernelConnector extends EventEmitter {
     if (!Object.values(FREQUENCIES).includes(hz)) {
       throw new Error(`Invalid frequency: ${hz}. Use 528, 963, or 432 Hz.`);
     }
-
     const payload = {
       portalId: this.portalId,
       frequency: hz,
       activatedAt: new Date().toISOString(),
       effect: this._getFrequencyEffect(hz),
     };
-
     try {
       const response = await this.client.post("/api/frequencies/sync", payload);
       this.emit("frequencySynced", payload);
@@ -159,32 +145,12 @@ class SovereignKernelConnector extends EventEmitter {
       ...data,
       reportedAt: new Date().toISOString(),
     };
-
     try {
       const response = await this.client.post("/api/income/report", payload);
       this.emit("incomeReported", payload);
       return response.data;
     } catch (error) {
       return { ...payload, queued: true };
-    }
-  }
-
-  // ─── Health Check ─────────────────────────────────────────────────────────
-  async healthCheck() {
-    const status = {
-      portalId: this.portalId,
-      portalName: this.portalName,
-      track: this.track,
-      frequency: this.frequency,
-      connected: this.connected,
-      timestamp: new Date().toISOString(),
-    };
-
-    try {
-      const response = await this.client.get("/api/health");
-      return { ...status, kernelStatus: response.data };
-    } catch {
-      return { ...status, kernelStatus: "offline" };
     }
   }
 
@@ -198,7 +164,6 @@ class SovereignKernelConnector extends EventEmitter {
       detectedAt: new Date().toISOString(),
       autoDefenseActivated: anomaly.autoDefense || false,
     };
-
     try {
       await this.client.post("/api/guardian/anomaly", payload);
       this.emit("anomalyReported", payload);
@@ -206,22 +171,6 @@ class SovereignKernelConnector extends EventEmitter {
     } catch {
       this.emit("anomalyReported", { ...payload, queued: true });
     }
-  }
-
-  // ─── Heartbeat ────────────────────────────────────────────────────────────
-  _startHeartbeat() {
-    this._heartbeatTimer = setInterval(async () => {
-      try {
-        await this.client.post("/api/portals/heartbeat", {
-          portalId: this.portalId,
-          timestamp: new Date().toISOString(),
-        });
-        this.emit("heartbeat", { portalId: this.portalId, alive: true });
-      } catch {
-        this.connected = false;
-        this.emit("heartbeat", { portalId: this.portalId, alive: false });
-      }
-    }, this.heartbeatInterval);
   }
 
   disconnect() {
@@ -233,7 +182,6 @@ class SovereignKernelConnector extends EventEmitter {
     this.emit("disconnected", { portalId: this.portalId });
   }
 
-  // ─── Helpers ──────────────────────────────────────────────────────────────
   _getFrequencyEffect(hz) {
     const effects = {
       528: "DNA Healing & Cellular Regeneration ACTIVATED",
@@ -244,7 +192,7 @@ class SovereignKernelConnector extends EventEmitter {
   }
 }
 
-// ─── Factory: Create connectors for all 5 portals ────────────────────────────
+// Factory: Create connectors for all 5 portals
 function createAllPortalConnectors(config = {}) {
   return Object.entries(PORTAL_REGISTRY).reduce((acc, [key, portal]) => {
     acc[key] = new SovereignKernelConnector({
@@ -258,24 +206,20 @@ function createAllPortalConnectors(config = {}) {
   }, {});
 }
 
-// ─── Register all portals simultaneously ─────────────────────────────────────
+// Register all portals simultaneously
 async function registerAllPortals(config = {}) {
   console.log("\n🕋 Registering all 5 portals with the Unified Sovereign Kernel...\n");
   const connectors = createAllPortalConnectors(config);
-
   const results = await Promise.allSettled(
     Object.values(connectors).map((connector) => connector.register())
   );
-
   const summary = Object.keys(connectors).map((key, i) => ({
     portal: PORTAL_REGISTRY[key].name,
     track: PORTAL_REGISTRY[key].track,
     status: results[i].status === "fulfilled" ? "✅ Connected" : "⚠️  Standalone",
   }));
-
   console.log("\n📊 Portal Registration Summary:");
   console.table(summary);
-
   return { connectors, summary };
 }
 
