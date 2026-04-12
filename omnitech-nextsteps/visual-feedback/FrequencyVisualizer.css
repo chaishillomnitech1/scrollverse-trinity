@@ -1,0 +1,98 @@
+/**
+ * ╔══════════════════════════════════════════════════════════════════════╗
+ * ║   Frequency Visualizer CSS — Sacred Geometry Styling                ║
+ * ╚══════════════════════════════════════════════════════════════════════╝
+ */
+
+.frequency-visualizer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 20px;
+  background: linear-gradient(135deg, #0a0e27 0%, #16213e 100%);
+  border-radius: 12px;
+  border: 2px solid rgba(0, 255, 136, 0.3);
+  box-shadow: 0 0 30px rgba(0, 255, 136, 0.1);
+}
+
+.sacred-geometry {
+  width: 300px;
+  height: 300px;
+  margin-bottom: 20px;
+  filter: drop-shadow(0 0 20px rgba(0, 255, 136, 0.2));
+}
+
+.frequency-info {
+  text-align: center;
+  color: #ffffff;
+  font-family: "Courier New", monospace;
+}
+
+.frequency-info h2 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: bold;
+  color: #00ff88;
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+.frequency-info p {
+  margin: 8px 0;
+  font-size: 14px;
+  color: #cccccc;
+  letter-spacing: 1px;
+}
+
+.frequency-bar {
+  width: 100%;
+  height: 8px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  margin-top: 12px;
+  overflow: hidden;
+}
+
+.frequency-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 10px currentColor;
+}
+
+.status-active {
+  margin-top: 12px;
+  font-size: 16px;
+  color: #00ff88;
+  font-weight: bold;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  .frequency-visualizer {
+    max-width: 100%;
+    padding: 15px;
+  }
+
+  .sacred-geometry {
+    width: 250px;
+    height: 250px;
+  }
+
+  .frequency-info h2 {
+    font-size: 24px;
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "projectId": "scrollverse-trinity-sovereign",
+  "orgId": "chaishillomnitech1",
+  "settings": {
+    "buildCommand": "cd frontend && npm run build",
+    "outputDirectory": "frontend/dist",
+    "framework": "vite",
+    "nodeVersion": "18.x"
+  },
+  "env": {
+    "VITE_STRIPE_PUBLISHABLE_KEY": "@stripe_publishable_key",
+    "VITE_POLYGON_RPC_URL": "@polygon_rpc_url",
+    "VITE_CONTRACT_ADDRESS_CHX": "@contract_address_chx",
+    "VITE_CONTRACT_ADDRESS_NFT": "@contract_address_nft"
+  }
+}
