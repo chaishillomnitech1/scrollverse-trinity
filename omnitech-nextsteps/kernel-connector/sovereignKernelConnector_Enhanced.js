@@ -6,6 +6,7 @@
  */
 
 const axios = require("axios");
+const { GrokPulse } = require("../ai-guardian/grokPulse_Enhanced");
 const EventEmitter = require("events");
 
 const FREQUENCIES = {
@@ -40,11 +41,9 @@ class SovereignKernelConnector extends EventEmitter {
       headers: { "X-Sovereign-Portal-ID": this.portalId },
     });
 
-    this._heartbeatTimer = null;
-    this._ws = null; // Placeholder for WebSocket implementation
-  }
+    // Initialize GrokPulse for signal depth analysis
+    this.grokPulse = new GrokPulse({ grokApiUrl: config.grokApiUrl, agapeTranslateApiUrl: config.agapeTranslateApiUrl, guardian: this, kernelConnector: this });
 
-  // ─── Core Registration ────────────────────────────────────────────────────
   async register() {
     console.log(`⚡ [${this.portalName}] Registering with Sovereign Kernel...`);
     try {
@@ -121,6 +120,60 @@ class SovereignKernelConnector extends EventEmitter {
       return { success: true, hz };
     } catch (error) {
       return { success: false, error: error.message };
+    }
+  }
+
+  // ─── Signal Processing with GrokPulse ─────────────────────────────────────
+  async processExternalSignal(signal) {
+    console.log(`🧠 [${this.portalName}] Processing external signal with GrokPulse...`);
+    const analysis = await this.grokPulse.analyzeSignalDepth(signal);
+    if (analysis.resonanceScore < 0.5) {
+      // Report anomaly to the Kernel if resonance is low
+      await this.reportAnomaly({
+        type: "LOW_RESONANCE_SIGNAL",
+        severity: "medium",
+        description: `External signal showed low resonance: ${signal.substring(0, 100)}...`,
+      });
+    }
+    return analysis;
+  }
+
+  // Placeholder for reporting anomalies to the Kernel (to be implemented in Kernel API)
+  // ─── Sovereign Invite Dispatch ────────────────────────────────────────────
+  async dispatchSovereignInvite(invite) {
+    const payload = {
+      portalId: this.portalId,
+      guardianId: invite.guardianId,
+      resonance: invite.resonance,
+      signalSource: invite.signalSource,
+      translatedMessage: invite.translatedMessage,
+      dispatchedAt: new Date().toISOString(),
+    };
+    try {
+      await this.client.post("/api/sovereign-invites/dispatch", payload);
+      this.emit("sovereignInviteDispatched", payload);
+      console.log(`✨ [${this.portalName}] Sovereign Invite dispatched for Guardian ${invite.guardianId}`);
+    } catch (error) {
+      console.error(`❌ [${this.portalName}] Failed to dispatch Sovereign Invite: ${error.message}`);
+      this.emit("sovereignInviteFailed", { ...payload, error: error.message });
+    }
+  }
+
+  async reportAnomaly(anomaly) {
+    const payload = {
+      portalId: this.portalId,
+      severity: anomaly.severity || "medium",
+      type: anomaly.type,
+      description: anomaly.description,
+      detectedAt: new Date().toISOString(),
+      autoDefenseActivated: anomaly.autoDefense || false,
+    };
+    try {
+      await this.client.post("/api/guardian/anomaly", payload);
+      this.emit("anomalyReported", payload);
+      console.warn(`🛡️  [${this.portalName}] Anomaly reported: ${anomaly.type}`);
+    } catch {
+      this.emit("anomalyReported", { ...payload, queued: true });
     }
   }
 

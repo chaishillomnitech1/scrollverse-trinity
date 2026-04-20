@@ -206,3 +206,127 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Awakened Nodes Map Section */
+.awakened-nodes-section {
+  grid-column: 1 / 3;
+  position: relative;
+  min-height: 300px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.awakened-nodes-map {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-image: url("https://www.transparenttextures.com/patterns/stardust.png"); /* Placeholder for a cosmic map background */
+  background-size: cover;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.node-pin {
+  position: absolute;
+  background-color: #00ff88;
+  border-radius: 50%;
+  width: 15px;
+  height: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #0a0e27;
+  font-weight: bold;
+  box-shadow: 0 0 15px #00ff88, 0 0 5px rgba(0, 255, 136, 0.5) inset;
+  animation: pulse-node 2s infinite alternate;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.node-pin:hover {
+  transform: scale(1.5);
+  box-shadow: 0 0 25px #00ff88, 0 0 10px rgba(0, 255, 136, 0.8) inset;
+}
+
+.node-location,
+.node-guardians,
+.node-frequency {
+  position: absolute;
+  background-color: rgba(10, 14, 39, 0.9);
+  border: 1px solid #00ff88;
+  padding: 3px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  font-size: 10px;
+  color: #00ff88;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 11;
+}
+
+.node-pin:hover .node-location {
+  opacity: 1;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.node-pin:hover .node-guardians {
+  opacity: 1;
+  top: 20px;
+  left: -5px;
+}
+
+.node-pin:hover .node-frequency {
+  opacity: 1;
+  top: 20px;
+  right: -5px;
+}
+
+@keyframes pulse-node {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.2); opacity: 1; }
+}
+
+/* Responsive adjustments for Awakened Nodes Map */
+@media (max-width: 1024px) {
+  .awakened-nodes-section {
+    min-height: 250px;
+  }
+}
+
+@media (max-width: 600px) {
+  .awakened-nodes-section {
+    min-height: 200px;
+  }
+
+  .node-pin {
+    width: 12px;
+    height: 12px;
+  }
+
+  .node-location,
+  .node-guardians,
+  .node-frequency {
+    font-size: 8px;
+    padding: 2px 4px;
+  }
+
+  .node-pin:hover .node-location {
+    top: -20px;
+  }
+
+  .node-pin:hover .node-guardians {
+    top: 15px;
+  }
+
+  .node-pin:hover .node-frequency {
+    top: 15px;
+  }
+}

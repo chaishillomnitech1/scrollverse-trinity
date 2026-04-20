@@ -18,6 +18,14 @@ const EcosystemDashboard = () => {
     { id: 5, name: "Rose Gold Encryption", frequency: 528, status: "online", health: 97 },
   ]);
 
+  const [awakenedNodes, setAwakenedNodes] = useState([
+    { id: 1, location: "New York", guardians: 1500, frequency: 528 },
+    { id: 2, location: "London", guardians: 1200, frequency: 963 },
+    { id: 3, location: "Tokyo", guardians: 1800, frequency: 432 },
+    { id: 4, location: "Dubai", guardians: 900, frequency: 963 },
+    { id: 5, location: "Sydney", guardians: 700, frequency: 528 },
+  ]);
+
   const [activeFrequency, setActiveFrequency] = useState(528);
   const [ecosystemHealth, setEcosystemHealth] = useState(98);
 
@@ -109,7 +117,28 @@ const EcosystemDashboard = () => {
               <span className="stat-label">Threat Level</span>
               <span className="stat-value">🟢 GREEN</span>
             </div>
+            <div className="stat-card">
+              <span className="stat-label">Awakened Nodes</span>
+              <span className="stat-value">{awakenedNodes.length}</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">Total Guardians</span>
+              <span className="stat-value">{awakenedNodes.reduce((acc, node) => acc + node.guardians, 0).toLocaleString()}</span>
+            </div>
           </div>
+        </div>
+      </div>
+
+      <div className="dashboard-section awakened-nodes-section">
+        <h2>Awakened Nodes Map</h2>
+        <div className="awakened-nodes-map">
+          {awakenedNodes.map((node) => (
+            <div key={node.id} className="node-pin" style={{ top: `${Math.random() * 90}%`, left: `${Math.random() * 90}%` }}>
+              <span className="node-location">{node.location}</span>
+              <span className="node-guardians">{node.guardians.toLocaleString()} G</span>
+              <span className="node-frequency">{node.frequency} Hz</span>
+            </div>
+          ))}
         </div>
       </div>
 

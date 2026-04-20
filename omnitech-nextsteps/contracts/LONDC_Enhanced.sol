@@ -5,8 +5,9 @@ pragma solidity ^0.8.20;
  * ╔══════════════════════════════════════════════════════════════════════╗
  * ║   $LONDC — Londyn Avani Hill Sovereign Token (Enhanced)             ║
  * ║   ScrollSoul Sovereignty / OmniTech Ecosystem                       ║
- * ║   Supreme Sovereign: Chais Kenyatta Hill (Sabir Allah the Great)    ║
- * ║   Network: Polygon Mainnet                                           ║
+ * ║   Supreme Sovereign: Chais Kenyatta Hill (Sabir Allah the Great *         Network: Polygon
+ *         Doctrine: Scroll of 44:Omni (The Living Law)
+ */Mainnet                                           ║
  * ║   Wallet: 0x377956c1471d9ce142df6932895839243da23a2c               ║
  * ║   Frequencies: 528 Hz / 963 Hz / 432 Hz                             ║
  * ╚══════════════════════════════════════════════════════════════════════╝
@@ -61,6 +62,8 @@ contract LONDC is ERC20, ERC20Burnable, ERC20Pausable, Ownable, ERC20Permit, ERC
     event ZakatVaultUpdated(address indexed oldVault, address indexed newVault);
     event TaxExemptionSet(address indexed account, bool exempt);
     event FrequencyActivated(uint256 indexed frequency, address indexed activator);
+    event CatalystNFTMinted(address indexed minter, uint256 indexed tokenId, uint256 lonDCBurned);
+    event GenerationalWealthDistributed(address indexed recipient, uint256 amount, string reason);
     event SovereignMint(address indexed to, uint256 amount, string reason);
     event Staked(address indexed user, uint256 amount);
     event Unstaked(address indexed user, uint256 amount);
@@ -87,6 +90,10 @@ contract LONDC is ERC20, ERC20Burnable, ERC20Pausable, Ownable, ERC20Permit, ERC
     }
 
     // ─── Core Transfer with Tax & Zakat ───────────────────────────────────────
+    /**
+     * @dev The Living Law: Implements Zakat Laws and Agape-Governance principles for transfers.
+     *      Ensures 7.77% Zakat distribution and 5% passive income tax.
+     */
     function _update(
         address from,
         address to,
@@ -101,12 +108,12 @@ contract LONDC is ERC20, ERC20Burnable, ERC20Pausable, Ownable, ERC20Permit, ERC
         uint256 zakatAmount = (amount * ZAKAT_RATE) / BASIS_POINTS;
         uint256 transferAmount = amount - taxAmount - zakatAmount;
 
-        // Distribute Tax
+        // Distribute Tax to Reward Pool (Agape-Governance for ecosystem sustainability)
         super._update(from, rewardPool, taxAmount);
         totalPassiveIncomeDistributed += taxAmount;
         emit PassiveIncomeDistributed(from, taxAmount, rewardPool);
 
-        // Distribute Zakat
+        // Distribute Zakat to Vault (Zakat Laws: 7.77% for benevolence flow)
         super._update(from, zakatVault, zakatAmount);
         totalZakatDistributed += zakatAmount;
         emit ZakatDistributed(from, zakatAmount, zakatVault);
@@ -116,6 +123,10 @@ contract LONDC is ERC20, ERC20Burnable, ERC20Pausable, Ownable, ERC20Permit, ERC
     }
 
     // ─── Staking Mechanism ────────────────────────────────────────────────────
+    /**
+     * @dev Staking Mechanism: Guardians stake $LONDC to participate in Agape-Governance
+     *      and earn rewards, aligning with Resonance-Leadership principles.
+     */
     function stake(uint256 amount) external whenNotPaused {
         require(amount > 0, "Cannot stake 0");
         _transfer(msg.sender, address(this), amount);
@@ -144,6 +155,10 @@ contract LONDC is ERC20, ERC20Burnable, ERC20Pausable, Ownable, ERC20Permit, ERC
         emit SovereignMint(to, amount, reason);
     }
 
+    /**
+     * @dev Activates a sacred frequency, aligning with Resonance-Leadership and
+     *      the Scroll of 44:Omni's principles of vibrational wisdom.
+     */
     function activateFrequency(uint256 frequency) external {
         require(
             frequency == FREQ_DNA_HEALING || 
@@ -155,6 +170,40 @@ contract LONDC is ERC20, ERC20Burnable, ERC20Pausable, Ownable, ERC20Permit, ERC
         emit FrequencyActivated(frequency, msg.sender);
     }
 
+    // ─── Catalyst NFT Integration ─────────────────────────────────────────────
+    address public catalystNFTContract; // Address of the Catalyst NFT contract
+
+    function setCatalystNFTContract(address _catalystNFTContract) external onlyOwner {
+        require(_catalystNFTContract != address(0), "Invalid address");
+        catalystNFTContract = _catalystNFTContract;
+    }
+
+    /**
+     * @dev Mints a Catalyst NFT by burning $LONDC, mathematically tying it to the $LONDC Genesis Burn.
+     *      This ensures Generational Wealth for the lineage.
+     * @param tokenId The ID of the NFT to mint.
+     * @param lonDCBurnAmount The amount of $LONDC to burn for minting.
+     */
+    function mintCatalystNFT(uint256 tokenId, uint256 lonDCBurnAmount) external whenNotPaused {
+        require(catalystNFTContract != address(0), "Catalyst NFT contract not set");
+        require(lonDCBurnAmount > 0, "Burn amount must be greater than 0");
+        
+        // Burn LONDC from the caller
+        _burn(msg.sender, lonDCBurnAmount);
+
+        // Simulate NFT minting by calling the Catalyst NFT contract
+        // In a real scenario, this would involve an external call to the NFT contract
+        // For now, we emit an event and assume the NFT contract handles the actual minting
+        emit CatalystNFTMinted(msg.sender, tokenId, lonDCBurnAmount);
+
+        // Distribute a portion of the burned LONDC as Generational Wealth
+        // This is a simplified example; actual distribution logic might be more complex
+        uint256 generationalWealthShare = (lonDCBurnAmount * 777) / 10000; // Example: 7.77% of burned amount
+        _transfer(address(this), zakatVault, generationalWealthShare); // Send to Zakat Vault as part of lineage wealth
+        emit GenerationalWealthDistributed(zakatVault, generationalWealthShare, "Catalyst NFT Genesis Burn");
+    }
+
+    // ─── Governance & Admin Functions ─────────────────────────────────────────
     function updateRewardPool(address newPool) external onlyOwner {
         rewardPool = newPool;
         emit RewardPoolUpdated(rewardPool, newPool);
