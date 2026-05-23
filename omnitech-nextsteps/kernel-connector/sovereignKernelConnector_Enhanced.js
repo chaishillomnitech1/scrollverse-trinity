@@ -8,6 +8,9 @@
 const axios = require("axios");
 const { GrokPulse } = require("../ai-guardian/grokPulse_Enhanced");
 const EventEmitter = require("events");
+const { LegionDeployment } = require("../legion/legionDeployment");
+const { BlessingEngine } = require("../blessing-engine/blessingEngine");
+const { StripeNexus } = require("../stripe-nexus/stripeNexus");
 
 const FREQUENCIES = {
   DNA_HEALING: 528,
@@ -32,6 +35,9 @@ class SovereignKernelConnector extends EventEmitter {
     this.frequency = config.frequency || 432;
     this.kernelUrl = config.kernelUrl || "https://kernel.scrollverse.io";
     this.heartbeatInterval = config.heartbeatInterval || 30000; // 30s
+    this.londcContractAddress = config.londcContractAddress;
+    this.blessingEngineWallet = config.blessingEngineWallet;
+    this.blessingEnginePrivateKey = config.blessingEnginePrivateKey;
     
     this.connected = false;
     this.bridgeStatus = "stable";
@@ -43,6 +49,15 @@ class SovereignKernelConnector extends EventEmitter {
 
     // Initialize GrokPulse for signal depth analysis
     this.grokPulse = new GrokPulse({ grokApiUrl: config.grokApiUrl, agapeTranslateApiUrl: config.agapeTranslateApiUrl, guardian: this, kernelConnector: this });
+    this.legionDeployment = new LegionDeployment({ numEnforcers: 10000, kernelConnector: this });
+    this.enforcers = {}; // To store registered enforcers
+    this.blessingEngine = new BlessingEngine(      kernelConnector: this,
+    });
+
+    this.stripeNexus = new StripeNexus({ kernelConnector: this }); londcContractAddress: this.londcContractAddress,
+      blessingEngineWallet: this.blessingEngineWallet,
+      blessingEnginePrivateKey: this.blessingEnginePrivateKey,
+    });
 
   async register() {
     console.log(`⚡ [${this.portalName}] Registering with Sovereign Kernel...`);
@@ -58,6 +73,11 @@ class SovereignKernelConnector extends EventEmitter {
       this._startHeartbeat();
       this._initWebSocket();
       this.emit("connected", response.data);
+      // Automatically deploy the legion after kernel registration
+      await this.legionDeployment.deploySovereignFleet();
+      // Initialize Stripe Nexus after successful registration
+      // This is a placeholder for actual Stripe initialization logic, which might involve fetching dynamic configs
+      // await this.stripeNexus.initialize(); // Assuming an initialize method exists in StripeNexus
       return response.data;
     } catch (error) {
       this.connected = false;
@@ -140,6 +160,19 @@ class SovereignKernelConnector extends EventEmitter {
 
   // Placeholder for reporting anomalies to the Kernel (to be implemented in Kernel API)
   // ─── Sovereign Invite Dispatch ────────────────────────────────────────────
+  // ─── Manus-721 Portal & Blessing Engine Integration ───────────────────────
+  async userConnectedToManus721Portal(userWallet, resonanceScore) {
+    console.log(`🌐 [${this.portalName}] User ${userWallet} connected to Manus-721 Portal. Initiating Blessing Engine.`);
+    const result = await this.blessingEngine.userConnectedToStream(userWallet, resonanceScore);
+    if (result.success) {
+      this.emit("manus721Blessing", { userWallet, cscAmount: result.amount, transactionHash: result.transactionHash });
+      console.log(`💎 [${this.portalName}] Manus-721 Blessing successful for ${userWallet}.`);
+    } else {
+      console.error(`❌ [${this.portalName}] Manus-721 Blessing failed for ${userWallet}: ${result.message}`);
+    }
+    return result;
+  }
+
   async dispatchSovereignInvite(invite) {
     const payload = {
       portalId: this.portalId,
@@ -157,6 +190,19 @@ class SovereignKernelConnector extends EventEmitter {
       console.error(`❌ [${this.portalName}] Failed to dispatch Sovereign Invite: ${error.message}`);
       this.emit("sovereignInviteFailed", { ...payload, error: error.message });
     }
+  }
+
+  // ─── Enforcer Management ──────────────────────────────────────────────────
+  async registerEnforcer(enforcer) {
+    this.enforcers[enforcer.id] = enforcer;
+    console.log(`🛡️ [${this.portalName}] Enforcer ${enforcer.id} registered. Total enforcers: ${Object.keys(this.enforcers).length}`);
+    this.emit("enforcerRegistered", enforcer);
+  }
+
+  async unregister() {
+    if (this._heartbeatTimer) clearInterval(this._heartbeatTimer);
+    this.connected = false;
+    this.emit("disconnected");
   }
 
   async reportAnomaly(anomaly) {

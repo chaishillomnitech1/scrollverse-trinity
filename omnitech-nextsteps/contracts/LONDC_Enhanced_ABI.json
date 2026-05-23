@@ -1,0 +1,41 @@
+[
+  // Placeholder for LONDC_Enhanced ABI
+  // In a real deployment, this would be the actual ABI of the deployed LONDC_Enhanced contract.
+  // Example ABI entry for mintCSC function:
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "recipient",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "reason",
+        "type": "string"
+      }
+    ],
+    "name": "mintCSC",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_blessingEngineAddress",
+        "type": "address"
+      }
+    ],
+    "name": "setBlessingEngineAddress",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

@@ -1,0 +1,6 @@
+file '/home/ubuntu/scrollverse-trinity/broadcast-assets/trailer_part1.mp4'
+file '/home/ubuntu/scrollverse-trinity/broadcast-assets/trailer_part2.mp4'
+file '/home/ubuntu/scrollverse-trinity/broadcast-assets/trailer_part3.mp4'
+file '/home/ubuntu/scrollverse-trinity/broadcast-assets/trailer_part4.mp4'
+file '/home/ubuntu/scrollverse-trinity/broadcast-assets/trailer_part5.mp4'
+file '/home/ubuntu/scrollverse-trinity/broadcast-assets/trailer_part6.mp4'

@@ -67,6 +67,7 @@ contract LONDC is ERC20, ERC20Burnable, ERC20Pausable, Ownable, ERC20Permit, ERC
     event SovereignMint(address indexed to, uint256 amount, string reason);
     event Staked(address indexed user, uint256 amount);
     event Unstaked(address indexed user, uint256 amount);
+    event CSCMinted(address indexed recipient, uint256 amount, string reason);
 
     // ─── Constructor ──────────────────────────────────────────────────────────
     constructor(
@@ -203,7 +204,31 @@ contract LONDC is ERC20, ERC20Burnable, ERC20Pausable, Ownable, ERC20Permit, ERC
         emit GenerationalWealthDistributed(zakatVault, generationalWealthShare, "Catalyst NFT Genesis Burn");
     }
 
-    // ─── Governance & Admin Functions ─────────────────────────────────────────
+    // ─── Blessing Engine Integration ──────────────────────────────────────────
+    address public blessingEngineAddress; // Address of the Blessing Engine
+
+    function setBlessingEngineAddress(address _blessingEngineAddress) external onlyOwner {
+        require(_blessingEngineAddress != address(0), "Invalid address");
+        blessingEngineAddress = _blessingEngineAddress;
+    }
+
+    /**
+     * @dev Mints CSC (Celestine Star Coin) and distributes it to a recipient.
+     *      Only callable by the Blessing Engine.
+     * @param recipient The address to receive the minted CSC.
+     * @param amount The amount of CSC to mint.
+     * @param reason A description for the minting event.
+     */
+    function mintCSC(address recipient, uint256 amount, string memory reason) external onlyBlessingEngine {
+        _mint(recipient, amount);
+        emit CSCMinted(recipient, amount, reason);
+    }
+
+    modifier onlyBlessingEngine() {
+        require(msg.sender == blessingEngineAddress, "Only Blessing Engine can call this function");
+        _;
+    }
+
     function updateRewardPool(address newPool) external onlyOwner {
         rewardPool = newPool;
         emit RewardPoolUpdated(rewardPool, newPool);
