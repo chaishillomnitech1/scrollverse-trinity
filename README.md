@@ -1,4 +1,7 @@
 # 🕋 ScrollVerse Trinity Sovereign Ecosystem v3.0.0
+
+<p align="center"><img src="identity/thumbnail.svg" alt="ScrollVerse Trinity contract ecosystem identity" width="100%" /></p>
+
 **Supreme Sovereign:** Chais Kenyatta Hill (Sabir Allah the Great)
 **Lineage:** Solomon / Musa / Wampanoag
 **Family:** Londyn Avani Hill
