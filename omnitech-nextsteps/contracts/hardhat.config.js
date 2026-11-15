@@ -2,6 +2,30 @@ require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
 
 /** @type import('hardhat/config').HardhatUserConfig */
+const deployerAccounts = process.env.DEPLOYER_PRIVATE_KEY
+  ? [process.env.DEPLOYER_PRIVATE_KEY]
+  : [];
+const networks = {
+  hardhat: { chainId: 31337 },
+};
+
+// Polygon PoS Amoy rehearsal and Polygon mainnet are separate, explicit targets.
+if (process.env.AMOY_RPC_URL) {
+  networks.amoy = {
+    url: process.env.AMOY_RPC_URL,
+    accounts: deployerAccounts,
+    chainId: 80002,
+  };
+}
+if (process.env.POLYGON_RPC_URL) {
+  networks.polygon = {
+    url: process.env.POLYGON_RPC_URL,
+    accounts: deployerAccounts,
+    chainId: 137,
+    gasPrice: "auto",
+  };
+}
+
 module.exports = {
   solidity: {
     version: "0.8.20",
@@ -10,33 +34,26 @@ module.exports = {
       viaIR: true,
     },
   },
-  networks: {
-    // ─── Polygon Mainnet ───────────────────────────────────────────────────
-    polygon: {
-      url: process.env.POLYGON_RPC_URL || "https://polygon-rpc.com",
-      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
-      chainId: 137,
-      gasPrice: "auto",
-    },
-    // ─── Polygon Amoy Testnet (for testing before mainnet) ─────────────────
-    amoy: {
-      url: process.env.AMOY_RPC_URL || "https://rpc-amoy.polygon.technology",
-      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
-      chainId: 80002,
-    },
-    // ─── Local Hardhat Network ─────────────────────────────────────────────
-    hardhat: {
-      chainId: 31337,
-    },
-  },
+  networks,
   etherscan: {
     apiKey: {
       polygon: process.env.POLYGONSCAN_API_KEY || "",
+      polygonAmoy: process.env.POLYGONSCAN_API_KEY || "",
     },
+    customChains: [
+      {
+        network: "polygonAmoy",
+        chainId: 80002,
+        urls: {
+          apiURL: "https://api-amoy.polygonscan.com/api",
+          browserURL: "https://amoy.polygonscan.com",
+        },
+      },
+    ],
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS === "true",
     currency: "USD",
-    token: "MATIC",
+    token: "POL",
   },
 };
