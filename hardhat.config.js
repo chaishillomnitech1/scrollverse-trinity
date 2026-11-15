@@ -12,7 +12,7 @@ const networks = {
 // Use maintained, owner-configured RPC endpoints only.
 // Polygon retired its public Amoy and mainnet RPC endpoints in July 2026.
 if (process.env.AMOY_RPC_URL) {
-  networks.amoy = {
+  networks.polygonAmoy = {
     url: process.env.AMOY_RPC_URL,
     accounts: deployerAccounts,
     chainId: 80002,
